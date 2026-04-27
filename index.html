@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Power BI + DAX Interactive Lab — Valesca Bravo 2026</title>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy:  { DEFAULT: '#1d085e', light: '#2d1278', dark: '#130440' },
+            teal:  { DEFAULT: '#13d6c1', dark: '#0a9a88', light: '#3de8d6' },
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sora', sans-serif;
+      background: #09071a;
+      color: #e8e6f0;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ---- SYNTAX HIGHLIGHT ---- */
+    .code-block {
+      background: #1e1e1e;
+      border-radius: 10px;
+      padding: .9rem 1.1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: .8rem;
+      line-height: 1.75;
+      overflow-x: auto;
+      border: 1px solid #2a2a3e;
+      white-space: pre;
+    }
+    .dax-kw  { color: #569cd6; font-weight: 500; }
+    .dax-str { color: #ce9178; }
+    .dax-num { color: #b5cea8; }
+    .dax-cmt { color: #6a9955; font-style: italic; }
+    .dax-tbl { color: #4ec9b0; }
+    .dax-col { color: #9cdcfe; }
+    .dax-var { color: #c586c0; font-weight: 500; }
+
+    /* ---- SCROLLBAR ---- */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #110e2e; }
+    ::-webkit-scrollbar-thumb { background: #13d6c1; border-radius: 3px; }
+    .tab-scroll { overflow-x: auto; scrollbar-width: thin; }
+    .tab-scroll::-webkit-scrollbar { height: 3px; }
+
+    /* ---- ANIMATIONS ---- */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp .32s ease forwards; }
+
+    /* ---- RANGE ---- */
+    input[type=range] {
+      -webkit-appearance: none;
+      height: 4px;
+      background: #221b56;
+      border-radius: 4px;
+      outline: none;
+      width: 100%;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      background: #13d6c1;
+      border-radius: 50%;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 16px; height: 16px;
+      background: #13d6c1;
+      border-radius: 50%;
+      border: none;
+    }
+
+    /* ---- DATA TABLE ---- */
+    .dt { width: 100%; border-collapse: collapse; font-size: .79rem; }
+    .dt th {
+      background: #1d085e;
+      color: #13d6c1;
+      padding: .45rem .7rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: .7rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .dt td {
+      padding: .4rem .7rem;
+      border-bottom: 1px solid #221b56;
+      font-family: 'DM Mono', monospace;
+    }
+    .dt tr:hover td { background: #1a1542; }
+
+    /* ---- CARDS & BOXES ---- */
+    .card {
+      background: #110e2e;
+      border: 1px solid #221b56;
+      border-radius: 12px;
+      padding: 1.1rem 1.15rem;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: rgba(19,214,193,.28); }
+
+    .analogy-box {
+      background: linear-gradient(135deg, rgba(29,8,94,.55), rgba(10,154,136,.12));
+      border-left: 3px solid #13d6c1;
+      border-radius: 0 8px 8px 0;
+      padding: .7rem .95rem;
+      font-size: .85rem;
+      line-height: 1.6;
+    }
+
+    .result-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      background: rgba(10,154,136,.15);
+      border: 1px solid rgba(19,214,193,.3);
+      border-radius: 6px;
+      padding: .25rem .65rem;
+      font-family: 'DM Mono', monospace;
+      font-size: .79rem;
+      color: #13d6c1;
+    }
+
+    /* ---- QUIZ BUTTONS ---- */
+    .qopt {
+      background: #1a1542;
+      border: 1px solid #221b56;
+      border-radius: 8px;
+      padding: .6rem .9rem;
+      cursor: pointer;
+      transition: all .18s;
+      font-size: .85rem;
+      text-align: left;
+      width: 100%;
+      color: #e8e6f0;
+      font-family: 'Sora', sans-serif;
+    }
+    .qopt:hover:not(:disabled) { border-color: #13d6c1; background: #221b56; }
+    .qopt.correct  { border-color: #10b981; background: rgba(16,185,129,.12); color: #10b981; }
+    .qopt.wrong    { border-color: #ef4444; background: rgba(239,68,68,.1);   color: #ef4444; }
+    .qopt.selected { border-color: #13d6c1; }
+
+    /* ---- NAV BUTTON ---- */
+    .nav-btn {
+      background: transparent;
+      border: 1px solid #221b56;
+      border-radius: 6px;
+      padding: .48rem .9rem;
+      color: #8b86a8;
+      cursor: pointer;
+      font-size: .8rem;
+      font-family: 'Sora', sans-serif;
+      transition: all .18s;
+    }
+    .nav-btn:hover:not(:disabled) { border-color: #13d6c1; color: #e8e6f0; }
+    .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .nav-btn-primary {
+      background: #13d6c1;
+      color: #09071a;
+      border: none;
+      border-radius: 6px;
+      padding: .48rem .9rem;
+      font-weight: 700;
+      font-size: .8rem;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+    }
+    .nav-btn-primary:disabled { background: #221b56; color: #3e3a5e; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+/* ============================================================
+   SYNTAX HIGHLIGHTER
+============================================================ */
+function daxH(raw) {
+  const esc = raw
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const KWS = 'CALCULATE|FILTER|ALL|ALLEXCEPT|ALLSELECTED|DIVIDE|SUM|SUMX|COUNT|COUNTA|COUNTBLANK|COUNTX|DISTINCTCOUNT|AVERAGE|AVERAGEX|MAX|MAXX|MIN|MINX|IF|SWITCH|IFERROR|ISBLANK|BLANK|TRUE|FALSE|RELATED|RELATEDTABLE|LOOKUPVALUE|USERELATIONSHIP|CROSSFILTER|KEEPFILTERS|REMOVEFILTERS|TOTALYTD|TOTALQTD|TOTALMTD|SAMEPERIODLASTYEAR|DATEADD|PARALLELPERIOD|DATESBETWEEN|DATESYTD|RANKX|TOPN|HASONEVALUE|SELECTEDVALUE|VALUES|DISTINCT|EARLIER|CONTAINS|FORMAT|YEAR|MONTH|DAY|DATE';
+  return esc.split('\n').map(line => {
+    if (line.trim().startsWith('//')) return `<span class="dax-cmt">${line}</span>`;
+    let l = line;
+    l = l.replace(/(\/\/.*$)/, '<span class="dax-cmt">$1</span>');
+    l = l.replace(/"([^"]*)"/g, '<span class="dax-str">&quot;$1&quot;</span>');
+    l = l.replace(/\b(VAR|RETURN)\b/g, '<span class="dax-var">$1</span>');
+    l = l.replace(new RegExp(`\\b(${KWS})\\b`, 'g'), '<span class="dax-kw">$1</span>');
+    l = l.replace(/([A-Za-z_][A-Za-z0-9_ ]*)\[([^\]]+)\]/g,
+      '<span class="dax-tbl">$1</span>[<span class="dax-col">$2</span>]');
+    l = l.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="dax-num">$1</span>');
+    return l;
+  }).join('\n');
+}
+
+function Code({ code, label }) {
+  return (
+    <div>
+      {label && <div style={{color:'#8b86a8',fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:'.3rem',fontFamily:'DM Mono, monospace'}}>{label}</div>}
+      <div className="code-block" dangerouslySetInnerHTML={{ __html: daxH(code) }} />
+    </div>
+  );
+}
+
+/* ============================================================
+   SHARED SMALL COMPONENTS
+============================================================ */
+function Badge({ text, color = 'teal' }) {
+  const C = {
+    teal:   { bg:'rgba(19,214,193,.12)',  bd:'rgba(19,214,193,.3)',  tx:'#13d6c1' },
+    navy:   { bg:'rgba(29,8,94,.45)',     bd:'rgba(157,143,245,.25)',tx:'#9d8ff5' },
+    green:  { bg:'rgba(16,185,129,.12)', bd:'rgba(16,185,129,.3)',  tx:'#10b981' },
+    orange: { bg:'rgba(251,146,60,.12)', bd:'rgba(251,146,60,.3)',  tx:'#fb923c' },
+    red:    { bg:'rgba(239,68,68,.1)',   bd:'rgba(239,68,68,.3)',   tx:'#ef4444' },
+  }[color] || {};
+  return (
+    <span style={{background:C.bg,border:`1px solid ${C.bd}`,color:C.tx,borderRadius:'4px',padding:'.12rem .45rem',fontSize:'.68rem',fontWeight:700,letterSpacing:'.05em',textTransform:'uppercase',fontFamily:'DM Mono, monospace',whiteSpace:'nowrap'}}>{text}</span>
+  );
+}
+
+function H2({ title, sub }) {
+  return (
+    <div style={{marginBottom:'1.25rem'}}>
+      <h2 style={{fontSize:'1.25rem',fontWeight:700,color:'#e8e6f0',marginBottom:'.25rem'}}>{title}</h2>
+      {sub && <p style={{color:'#8b86a8',fontSize:'.83rem'}}>{sub}</p>}
+    </div>
+  );
+}
+
+function DataTable({ headers, rows, result }) {
+  return (
+    <div>
+      <div style={{overflowX:'auto',borderRadius:'8px',border:'1px solid #221b56'}}>
+        <table className="dt">
+          <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
+          <tbody>{rows.map((r,i) => <tr key={i}>{r.map((c,j) => <td key={j}>{c}</td>)}</tr>)}</tbody>
+        </table>
+      </div>
+      {result && (
+        <div style={{marginTop:'.5rem'}}>
+          <span className="result-badge">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            {result}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   DATA — FORMULAS
+============================================================ */
+const FORMULAS = [
+  {
+    name:'CALCULATE', tag:'El motor de DAX', diff:'Esencial', ctx:'Contexto de filtro',
+    analogy:'Imagina que estás contando naranjas en un mercado. CALCULATE te permite decir: "cuenta solo las naranjas del puesto azul, en el mes de marzo". Cambia las reglas del juego sin tocar los datos originales.',
+    code:`// Ventas solo de la categoría "Electronics"
+Ventas Electronics = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    Products[Category] = "Electronics"
+)`,
+    table:{ headers:['Producto','Categoría','Ventas'], rows:[['Laptop Pro','Electronics','$2,400'],['Mouse RGB','Electronics','$45'],['Desk Lamp','Furniture','$89'],['T-Shirt','Apparel','$29']], result:'Ventas Electronics = $2,445' }
+  },
+  {
+    name:'FILTER', tag:'El filtro preciso', diff:'Esencial', ctx:'Iteración de tabla',
+    analogy:'Como un colador de cocina, pero tú decides el tamaño de los agujeros. Solo pasan los datos que cumplen tu condición exacta.',
+    code:`// Ventas de órdenes mayores a $1,000
+Big Orders = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    FILTER(
+        Sales,
+        Sales[Amount] > 1000
+    )
+)`,
+    table:{ headers:['OrderID','Monto','¿Pasa?'], rows:[['#001','$1,500','Sí'],['#002','$250','No'],['#003','$3,200','Sí'],['#004','$890','No']], result:'Big Orders = $4,700' }
+  },
+  {
+    name:'ALL', tag:'El borrador de filtros', diff:'Esencial', ctx:'Contexto de filtro',
+    analogy:'Como presionar "deshacer todos los filtros" en Excel. ALL ignora lo que el usuario seleccionó en el reporte y trabaja con la tabla completa. Imprescindible para calcular % del total.',
+    code:`// % de participación sobre el total
+% del Total = 
+DIVIDE(
+    SUM(Sales[Amount]),
+    CALCULATE(
+        SUM(Sales[Amount]),
+        ALL(Sales)
+    )
+)`,
+    table:{ headers:['Región','Ventas','% Total'], rows:[['Norte','$50,000','25%'],['Sur','$60,000','30%'],['Este','$45,000','22.5%'],['Oeste','$45,000','22.5%']], result:'ALL(Sales) base = $200,000' }
+  },
+  {
+    name:'DIVIDE', tag:'La división segura', diff:'Esencial', ctx:'Función matemática',
+    analogy:'Una calculadora que no explota si divides por cero. En vez de mostrar error, devuelve BLANK() o el valor que tú le indiques. Perfecta para KPIs que a veces no tienen denominador.',
+    code:`// Ticket promedio por orden — sin riesgo de error
+Avg Ticket = 
+DIVIDE(
+    SUM(Sales[Amount]),
+    COUNT(Sales[OrderID]),
+    0   // valor si el denominador es 0
+)`,
+    table:{ headers:['Mes','Ventas','Órdenes','Avg Ticket'], rows:[['Ene','$15,000','120','$125'],['Feb','$0','0','$0 — no ERROR'],['Mar','$22,000','180','$122.22']], result:'Feb devuelve $0 en lugar de ERROR' }
+  },
+  {
+    name:'TOTALYTD', tag:'Acumulado del año', diff:'Intermedio', ctx:'Time Intelligence',
+    analogy:'Como la barra de progreso de tu meta anual de lectura: suma todo desde el 1 de enero hasta el día que estás mirando en el reporte.',
+    code:`// Ventas acumuladas en el año
+Sales YTD = 
+TOTALYTD(
+    SUM(Sales[Amount]),
+    Dates[Date]
+)
+
+// Con año fiscal personalizado (cierra el 30 de junio)
+Sales YTD Fiscal = 
+TOTALYTD(
+    SUM(Sales[Amount]),
+    Dates[Date],
+    "06-30"
+)`,
+    table:{ headers:['Mes','Ventas Mes','YTD'], rows:[['Ene','$10,000','$10,000'],['Feb','$12,000','$22,000'],['Mar','$9,500','$31,500'],['Abr','$14,000','$45,500']], result:'YTD a Abril = $45,500' }
+  },
+  {
+    name:'SAMEPERIODLASTYEAR', tag:'El año pasado, mismo período', diff:'Intermedio', ctx:'Time Intelligence',
+    analogy:'Como leer tu diario de hoy pero del año pasado. Desplaza automáticamente el contexto de fecha 365 días hacia atrás para comparar períodos equivalentes.',
+    code:`// Ventas del mismo período del año anterior
+Sales LY = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    SAMEPERIODLASTYEAR(Dates[Date])
+)
+
+// Crecimiento año a año
+YoY % = 
+DIVIDE(
+    SUM(Sales[Amount]) - [Sales LY],
+    [Sales LY]
+)`,
+    table:{ headers:['Período','Ventas 2025','Ventas 2024','YoY %'], rows:[['Q1','$45,000','$38,000','+18.4%'],['Q2','$52,000','$44,500','+16.9%'],['Q3','$48,000','$50,000','-4.0%']], result:'YoY Q1 2025 vs Q1 2024 = +18.4%' }
+  },
+  {
+    name:'DATEADD', tag:'La máquina del tiempo', diff:'Intermedio', ctx:'Time Intelligence',
+    analogy:'Una máquina del tiempo para tus datos: le dices cuántos días, meses o años quieres viajar hacia atrás — o adelante — y te devuelve los valores de ese período.',
+    code:`// Ventas de hace 30 días
+Sales -30d = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    DATEADD(Dates[Date], -30, DAY)
+)
+
+// Ventas del mes anterior completo
+Sales Prev Month = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    DATEADD(Dates[Date], -1, MONTH)
+)`,
+    table:{ headers:['Hoy','DATEADD(-30, DAY)','Resultado'], rows:[['01 May 2025','01 Abr 2025','$38,000'],['15 May 2025','15 Abr 2025','$41,500'],['31 May 2025','01 May 2025','$45,000']], result:'Ventas hace 30 días = $38,000' }
+  },
+];
+
+/* ============================================================
+   DATA — QUIZ
+============================================================ */
+const QUIZ = [
+  {
+    q:'¿Qué hace CALCULATE en DAX?',
+    opts:['Suma todos los números de una columna','Modifica el contexto de filtro para evaluar una expresión','Crea una nueva tabla calculada','Cuenta las filas de una tabla'],
+    correct:1,
+    exp:'CALCULATE evalúa su primer argumento dentro de un nuevo contexto de filtro definido por sus argumentos adicionales. Es la función más poderosa de DAX porque permite manipular el contexto de evaluación.'
+  },
+  {
+    q:'¿Cuál es la diferencia clave entre una Medida y una Columna Calculada?',
+    opts:['No hay diferencia real, ambas funcionan igual','Las columnas calculadas son siempre más rápidas','Las medidas se calculan al momento de la consulta; las columnas, al refrescar el modelo','Solo las columnas pueden usar time intelligence'],
+    correct:2,
+    exp:'Las medidas son dinámicas: se recalculan cada vez que el usuario interactúa con el reporte. Las columnas calculadas se materializan en memoria durante el refresh y ocupan RAM en el modelo comprimido.'
+  },
+  {
+    q:'En un esquema estrella, ¿qué contiene la tabla de hechos (fact table)?',
+    opts:['Nombres de clientes y direcciones','Descripciones de productos y categorías','Transacciones numéricas y claves foráneas a las dimensiones','Solo fechas y calendarios'],
+    correct:2,
+    exp:'La fact table almacena los eventos medibles del negocio — ventas, clics, conversiones — como valores numéricos, más las claves (IDs) que la conectan con cada tabla de dimensión del modelo.'
+  },
+  {
+    q:'¿Qué devuelve DIVIDE(10, 0, -1)?',
+    opts:['Error de división por cero','BLANK()','–1','Infinito'],
+    correct:2,
+    exp:'El tercer argumento de DIVIDE es el valor alternativo cuando el denominador es 0 o BLANK. En este caso devolverá –1, evitando el error y haciendo el modelo más robusto en situaciones sin datos.'
+  },
+  {
+    q:'¿Para qué sirve ALL() dentro de un CALCULATE?',
+    opts:['Para sumar todos los valores de una medida','Para eliminar los filtros aplicados sobre una tabla o columna','Para ordenar los resultados de mayor a menor','Para contar todos los valores distintos'],
+    correct:1,
+    exp:'ALL() remueve los filtros del contexto actual sobre la tabla o columna indicada. Es fundamental para calcular participaciones (% del total) y referencias absolutas que no deben variar con la selección del usuario.'
+  },
+];
+
+/* ============================================================
+   STAR SCHEMA SVG
+============================================================ */
+function StarSchema() {
+  return (
+    <svg viewBox="0 0 540 350" style={{width:'100%',maxWidth:'520px',height:'auto',display:'block',margin:'0 auto'}} aria-label="Diagrama de Esquema Estrella: tabla de hechos en el centro rodeada de dimensiones">
+      {/* Center - Fact */}
+      <rect x="185" y="125" width="170" height="100" rx="10" fill="#1d085e" stroke="#13d6c1" strokeWidth="1.5"/>
+      <text x="270" y="152" textAnchor="middle" fill="#13d6c1" fontSize="12" fontWeight="700" fontFamily="Sora,sans-serif">FACT_SALES</text>
+      <text x="270" y="170" textAnchor="middle" fill="#9d8ff5" fontSize="9.5" fontFamily="DM Mono,monospace">OrderID (PK)</text>
+      <text x="270" y="184" textAnchor="middle" fill="#9d8ff5" fontSize="9.5" fontFamily="DM Mono,monospace">Amount, Quantity</text>
+      <text x="270" y="198" textAnchor="middle" fill="#9d8ff5" fontSize="9.5" fontFamily="DM Mono,monospace">DateID · ProductID · CustomerID</text>
+      <text x="270" y="141" textAnchor="middle" fill="#e8e6f0" fontSize="10" fontWeight="600" fontFamily="Sora,sans-serif">★ Tabla de Hechos</text>
+      {/* DIM_DATE top */}
+      <rect x="190" y="12" width="160" height="76" rx="8" fill="#110e2e" stroke="#0a9a88" strokeWidth="1.2"/>
+      <text x="270" y="33" textAnchor="middle" fill="#0a9a88" fontSize="11" fontWeight="700" fontFamily="Sora,sans-serif">DIM_DATE</text>
+      <text x="270" y="49" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">DateID (PK)</text>
+      <text x="270" y="62" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">Year · Month · Quarter</text>
+      <text x="270" y="75" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">WeekDay · IsWeekend</text>
+      <line x1="270" y1="88" x2="270" y2="125" stroke="#0a9a88" strokeWidth="1" strokeDasharray="4,3"/>
+      <text x="274" y="108" fill="#0a9a88" fontSize="9" fontFamily="DM Mono,monospace">1</text>
+      <text x="274" y="126" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">*</text>
+      {/* DIM_PRODUCT right */}
+      <rect x="385" y="120" width="148" height="76" rx="8" fill="#110e2e" stroke="#0a9a88" strokeWidth="1.2"/>
+      <text x="459" y="141" textAnchor="middle" fill="#0a9a88" fontSize="11" fontWeight="700" fontFamily="Sora,sans-serif">DIM_PRODUCT</text>
+      <text x="459" y="157" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">ProductID (PK)</text>
+      <text x="459" y="170" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">Name · Category</text>
+      <text x="459" y="183" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">Brand · UnitCost</text>
+      <line x1="355" y1="172" x2="385" y2="172" stroke="#0a9a88" strokeWidth="1" strokeDasharray="4,3"/>
+      <text x="358" y="168" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">*</text>
+      <text x="381" y="168" fill="#0a9a88" fontSize="9" fontFamily="DM Mono,monospace">1</text>
+      {/* DIM_CUSTOMER left */}
+      <rect x="7" y="120" width="152" height="76" rx="8" fill="#110e2e" stroke="#0a9a88" strokeWidth="1.2"/>
+      <text x="83" y="141" textAnchor="middle" fill="#0a9a88" fontSize="11" fontWeight="700" fontFamily="Sora,sans-serif">DIM_CUSTOMER</text>
+      <text x="83" y="157" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">CustomerID (PK)</text>
+      <text x="83" y="170" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">Name · Email</text>
+      <text x="83" y="183" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">Segment · Region</text>
+      <line x1="159" y1="172" x2="185" y2="172" stroke="#0a9a88" strokeWidth="1" strokeDasharray="4,3"/>
+      <text x="162" y="168" fill="#0a9a88" fontSize="9" fontFamily="DM Mono,monospace">1</text>
+      <text x="183" y="168" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">*</text>
+      {/* DIM_CHANNEL bottom */}
+      <rect x="190" y="262" width="160" height="76" rx="8" fill="#110e2e" stroke="#0a9a88" strokeWidth="1.2"/>
+      <text x="270" y="283" textAnchor="middle" fill="#0a9a88" fontSize="11" fontWeight="700" fontFamily="Sora,sans-serif">DIM_CHANNEL</text>
+      <text x="270" y="299" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">ChannelID (PK)</text>
+      <text x="270" y="312" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">Online · Store · Partner</text>
+      <text x="270" y="325" textAnchor="middle" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">Region · Manager</text>
+      <line x1="270" y1="225" x2="270" y2="262" stroke="#0a9a88" strokeWidth="1" strokeDasharray="4,3"/>
+      <text x="274" y="242" fill="#8b86a8" fontSize="9" fontFamily="DM Mono,monospace">*</text>
+      <text x="274" y="260" fill="#0a9a88" fontSize="9" fontFamily="DM Mono,monospace">1</text>
+    </svg>
+  );
+}
+
+/* ============================================================
+   FORMULA CARD (accordion)
+============================================================ */
+function FormulaCard({ f }) {
+  const [open, setOpen] = useState(false);
+  const dc = f.diff === 'Esencial' ? 'teal' : 'orange';
+  return (
+    <div className="card" style={{marginBottom:'.85rem'}}>
+      <div onClick={() => setOpen(!open)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:'.7rem',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'.7rem',flex:1,minWidth:0}}>
+          <div style={{background:'rgba(19,214,193,.1)',border:'1px solid rgba(19,214,193,.22)',borderRadius:'7px',padding:'.35rem .6rem',fontFamily:'DM Mono,monospace',fontSize:'.82rem',color:'#13d6c1',fontWeight:500,flexShrink:0}}>{f.name}()</div>
+          <div style={{minWidth:0}}>
+            <div style={{fontWeight:600,fontSize:'.88rem',color:'#e8e6f0'}}>{f.tag}</div>
+            <div style={{display:'flex',gap:'.35rem',marginTop:'.2rem',flexWrap:'wrap'}}>
+              <Badge text={f.diff} color={dc} />
+              <Badge text={f.ctx} color="navy" />
+            </div>
+          </div>
+        </div>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8b86a8" strokeWidth="2"
+          style={{transform:open?'rotate(180deg)':'rotate(0)',transition:'.2s',flexShrink:0}}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      {open && (
+        <div className="fade-up" style={{marginTop:'.9rem',display:'flex',flexDirection:'column',gap:'.9rem'}}>
+          <div className="analogy-box">
+            <div style={{fontSize:'.68rem',color:'#13d6c1',fontWeight:700,marginBottom:'.25rem',letterSpacing:'.08em',textTransform:'uppercase'}}>Analogía</div>
+            {f.analogy}
+          </div>
+          <Code code={f.code} label="Sintaxis DAX" />
+          <div>
+            <div style={{fontSize:'.68rem',color:'#8b86a8',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:'.45rem',fontFamily:'DM Mono,monospace'}}>Datos de ejemplo + resultado esperado</div>
+            <DataTable {...f.table} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   ROAS CALCULATOR
+============================================================ */
+function ROASCalc() {
+  const [spend,      setSpend]      = useState(5000);
+  const [revenue,    setRevenue]    = useState(22000);
+  const [conv,       setConv]       = useState(180);
+
+  const roas     = spend > 0 ? (revenue / spend).toFixed(2) : '0.00';
+  const roasN    = parseFloat(roas);
+  const profit   = revenue - spend;
+  const roi      = spend > 0 ? (((revenue - spend) / spend) * 100).toFixed(1) : '0.0';
+  const cpa      = conv  > 0 ? (spend   / conv).toFixed(2) : '0.00';
+  const convVal  = conv  > 0 ? (revenue / conv).toFixed(2) : '0.00';
+
+  const rc = roasN >= 4 ? '#10b981' : roasN >= 2 ? '#13d6c1' : roasN >= 1 ? '#fb923c' : '#ef4444';
+  const rl = roasN >= 4 ? 'Excelente' : roasN >= 2 ? 'Bueno' : roasN >= 1 ? 'Mejorable' : 'Negativo';
+
+  const Slider = ({ label, value, set, min, max, step, prefix }) => (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.35rem'}}>
+        <label style={{fontSize:'.78rem',color:'#8b86a8',fontWeight:500}}>{label}</label>
+        <span style={{fontFamily:'DM Mono,monospace',fontSize:'.88rem',color:'#e8e6f0',fontWeight:700,background:'#1a1542',border:'1px solid #221b56',borderRadius:'6px',padding:'.12rem .45rem',minWidth:'88px',textAlign:'right',display:'inline-block'}}>
+          {prefix}{value.toLocaleString()}
+        </span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={e => set(Number(e.target.value))} />
+      <div style={{display:'flex',justifyContent:'space-between',fontSize:'.67rem',color:'#3e3a5e',marginTop:'.12rem',fontFamily:'DM Mono,monospace'}}>
+        <span>{prefix}{min.toLocaleString()}</span><span>{prefix}{max.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+
+  const KPI = ({ label, value, sub, color }) => (
+    <div style={{background:'#1a1542',border:`1px solid ${color}35`,borderRadius:'10px',padding:'.8rem',textAlign:'center'}}>
+      <div style={{fontSize:'1.4rem',fontWeight:800,color,lineHeight:1.1,fontFamily:'Sora,sans-serif'}}>{value}</div>
+      <div style={{fontSize:'.72rem',color:'#e8e6f0',fontWeight:600,marginTop:'.18rem'}}>{label}</div>
+      {sub && <div style={{fontSize:'.68rem',color:'#8b86a8',marginTop:'.1rem'}}>{sub}</div>}
+    </div>
+  );
+
+  const daxCode = `// ROAS — Retorno sobre inversión publicitaria
+ROAS = 
+DIVIDE(
+    SUM(Sales[Revenue]),
+    SUM(Marketing[AdSpend]),
+    0
+)
+
+// Profit
+Profit = 
+SUM(Sales[Revenue]) - SUM(Marketing[AdSpend])
+
+// ROI %
+ROI % = 
+DIVIDE(
+    SUM(Sales[Revenue]) - SUM(Marketing[AdSpend]),
+    SUM(Marketing[AdSpend])
+)
+
+// CPA — Costo por Adquisición
+CPA = 
+DIVIDE(
+    SUM(Marketing[AdSpend]),
+    COUNT(Sales[ConversionID]),
+    BLANK()
+)`;
+
+  const interp = roasN >= 4
+    ? ' Estás por encima del umbral óptimo de rentabilidad (4x). Considera escalar el presupuesto en los canales con mejor desempeño.'
+    : roasN >= 2
+    ? ' Estás generando retorno positivo. Analiza los canales con mayor CPA para optimizar la distribución del presupuesto.'
+    : roasN >= 1
+    ? ' Recuperas la inversión, pero el margen es estrecho. Revisa la segmentación y la estrategia de puja.'
+    : ' La campaña está perdiendo dinero. Pausar y revisar la estrategia de audiencia es urgente.';
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:'1.25rem'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr',gap:'1.25rem'}}>
+        <div className="card">
+          <div style={{fontSize:'.7rem',color:'#13d6c1',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',marginBottom:'1rem'}}>Parámetros de entrada</div>
+          <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+            <Slider label="Inversión publicitaria (Ad Spend)" value={spend} set={setSpend} min={100} max={50000} step={100} prefix="$" />
+            <Slider label="Ingresos generados (Revenue)" value={revenue} set={setRevenue} min={0} max={200000} step={500} prefix="$" />
+            <Slider label="Conversiones" value={conv} set={setConv} min={1} max={2000} step={1} prefix="" />
+          </div>
+        </div>
+
+        <div style={{display:'flex',flexDirection:'column',gap:'.65rem'}}>
+          <div style={{background:`${rc}12`,border:`2px solid ${rc}`,borderRadius:'12px',padding:'.9rem',textAlign:'center'}}>
+            <div style={{fontSize:'2.8rem',fontWeight:800,color:rc,lineHeight:1,fontFamily:'Sora,sans-serif'}}>{roas}x</div>
+            <div style={{color:'#e8e6f0',fontWeight:700,fontSize:'.95rem',marginTop:'.25rem'}}>ROAS</div>
+            <span style={{display:'inline-block',background:`${rc}20`,border:`1px solid ${rc}40`,borderRadius:'4px',padding:'.12rem .45rem',fontSize:'.68rem',color:rc,fontWeight:700,marginTop:'.25rem',fontFamily:'DM Mono,monospace',textTransform:'uppercase'}}>{rl}</span>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.55rem'}}>
+            <KPI label="Profit" value={`$${profit.toLocaleString()}`} color={profit >= 0 ? '#10b981' : '#ef4444'} />
+            <KPI label="ROI" value={`${roi}%`} color={parseFloat(roi) >= 0 ? '#13d6c1' : '#ef4444'} />
+            <KPI label="CPA" value={`$${cpa}`} sub="Costo por conv." color="#9d8ff5" />
+            <KPI label="Conv. Value" value={`$${convVal}`} sub="Valor promedio" color="#fb923c" />
+          </div>
+        </div>
+      </div>
+
+      <Code code={daxCode} label="Fórmulas DAX equivalentes" />
+
+      <div className="analogy-box">
+        <div style={{fontSize:'.68rem',color:'#13d6c1',fontWeight:700,marginBottom:'.25rem',textTransform:'uppercase',letterSpacing:'.08em'}}>Interpretación</div>
+        Un ROAS de {roas}x significa que por cada $1 invertido en publicidad se generan ${roas} en ingresos.{interp}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   QUIZ
+============================================================ */
+function Quiz() {
+  const [cur,        setCur]        = useState(0);
+  const [answers,    setAnswers]    = useState({});
+  const [showResult, setShowResult] = useState(false);
+
+  const q        = QUIZ[cur];
+  const answered = answers[cur] !== undefined;
+  const score    = Object.keys(answers).filter(k => answers[k] === QUIZ[k].correct).length;
+
+  function pick(i) {
+    if (answered) return;
+    setAnswers(prev => ({ ...prev, [cur]: i }));
+  }
+
+  function reset() { setAnswers({}); setCur(0); setShowResult(false); }
+
+  if (showResult) {
+    const pct = Math.round((score / QUIZ.length) * 100);
+    const c   = pct >= 80 ? '#10b981' : pct >= 60 ? '#13d6c1' : '#fb923c';
+    return (
+      <div className="card fade-up" style={{textAlign:'center',padding:'2rem 1.25rem'}}>
+        <div style={{fontSize:'3.2rem',fontWeight:800,color:c,lineHeight:1,fontFamily:'Sora,sans-serif'}}>{score}/{QUIZ.length}</div>
+        <div style={{fontSize:'1.05rem',fontWeight:600,color:'#e8e6f0',marginTop:'.45rem'}}>
+          {pct >= 80 ? 'Excelente dominio de DAX' : pct >= 60 ? 'Buen progreso' : 'Sigue practicando'}
+        </div>
+        <p style={{color:'#8b86a8',fontSize:'.83rem',marginTop:'.35rem',marginBottom:'1.4rem',lineHeight:1.5}}>
+          {pct >= 80 ? 'Tienes una base sólida para construir modelos complejos en producción.'
+                     : pct >= 60 ? 'Revisa las secciones de CALCULATE y contextos de evaluación.'
+                                 : 'Empieza por los Fundamentos y el módulo DAX Esencial.'}
+        </p>
+        <button onClick={reset} className="nav-btn-primary">Intentar de nuevo</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.85rem'}}>
+        <span style={{fontSize:'.72rem',color:'#8b86a8',fontFamily:'DM Mono,monospace'}}>Pregunta {cur+1} de {QUIZ.length}</span>
+        <div style={{display:'flex',gap:'4px'}}>
+          {QUIZ.map((_,i) => (
+            <div key={i} style={{width:'20px',height:'4px',borderRadius:'2px',
+              background: i < cur ? '#13d6c1' : i === cur ? '#9d8ff5' : '#221b56'}}/>
+          ))}
+        </div>
+      </div>
+
+      <div style={{fontWeight:600,fontSize:'.92rem',color:'#e8e6f0',marginBottom:'.85rem',lineHeight:1.5}}>{q.q}</div>
+
+      <div style={{display:'flex',flexDirection:'column',gap:'.45rem',marginBottom:'.85rem'}}>
+        {q.opts.map((opt, i) => {
+          let cls = 'qopt';
+          if (answered) {
+            if (i === q.correct) cls += ' correct';
+            else if (i === answers[cur] && i !== q.correct) cls += ' wrong';
+          } else if (answers[cur] === i) cls += ' selected';
+          return (
+            <button key={i} className={cls} onClick={() => pick(i)} disabled={answered}>
+              <span style={{color:'#8b86a8',fontFamily:'DM Mono,monospace',marginRight:'.45rem',fontSize:'.78rem'}}>{String.fromCharCode(65+i)}.</span>
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+
+      {answered && (
+        <div className="analogy-box fade-up" style={{marginBottom:'.85rem'}}>
+          <div style={{fontSize:'.68rem',color: answers[cur] === q.correct ? '#10b981' : '#ef4444',fontWeight:700,marginBottom:'.22rem',textTransform:'uppercase',letterSpacing:'.08em'}}>
+            {answers[cur] === q.correct ? 'Correcto' : 'Incorrecto'}
+          </div>
+          {q.exp}
+        </div>
+      )}
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <button className="nav-btn" onClick={() => setCur(c => Math.max(0,c-1))} disabled={cur===0}>Anterior</button>
+        {cur < QUIZ.length-1
+          ? <button className="nav-btn-primary" onClick={() => setCur(c => c+1)} disabled={!answered}>Siguiente</button>
+          : <button
+              onClick={() => setShowResult(true)}
+              disabled={!answered}
+              style={{background: answered ? '#1d085e' : '#221b56',border:`1px solid ${answered?'#13d6c1':'#221b56'}`,color: answered ? '#13d6c1' : '#3e3a5e',borderRadius:'6px',padding:'.48rem .9rem',fontWeight:700,cursor: answered?'pointer':'not-allowed',fontSize:'.8rem',fontFamily:'Sora,sans-serif'}}>
+              Ver resultado
+            </button>
+        }
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TABS CONTENT
+============================================================ */
+function TabFundamentos() {
+  return (
+    <div className="fade-up" style={{display:'flex',flexDirection:'column',gap:'2rem'}}>
+
+      <div>
+        <H2 title="¿Qué es Power BI?" sub="La lupa inteligente de tus datos" />
+        <div className="card" style={{marginBottom:'.85rem'}}>
+          <div className="analogy-box" style={{marginBottom:'.9rem'}}>
+            <div style={{fontSize:'.68rem',color:'#13d6c1',fontWeight:700,marginBottom:'.22rem',textTransform:'uppercase',letterSpacing:'.08em'}}>En términos simples</div>
+            Power BI es como una lupa mágica que toma pilas de números aburridos de Excel, bases de datos o la nube, y los convierte en gráficos interactivos que cualquiera puede entender. En lugar de enviar archivos Excel por email, compartes un reporte vivo que se actualiza automáticamente.
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:'.65rem'}}>
+            {[
+              {t:'Power BI Desktop',d:'App de escritorio donde construyes el modelo y los visuales'},
+              {t:'Power BI Service', d:'Plataforma web para publicar, compartir y colaborar'},
+              {t:'Power BI Mobile', d:'App móvil para consultar reportes en cualquier lugar'},
+              {t:'Power Query',     d:'Motor de transformación de datos — ETL sin código'},
+            ].map(x => (
+              <div key={x.t} style={{background:'#1a1542',borderRadius:'8px',padding:'.7rem',border:'1px solid #221b56'}}>
+                <div style={{fontSize:'.78rem',fontWeight:700,color:'#13d6c1',marginBottom:'.25rem'}}>{x.t}</div>
+                <div style={{fontSize:'.75rem',color:'#8b86a8',lineHeight:1.4}}>{x.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <H2 title="El Esquema Estrella" sub="La arquitectura base de todo modelo Power BI profesional" />
+        <div className="card" style={{marginBottom:'.85rem'}}>
+          <div className="analogy-box" style={{marginBottom:'1.1rem'}}>
+            <div style={{fontSize:'.68rem',color:'#13d6c1',fontWeight:700,marginBottom:'.22rem',textTransform:'uppercase',letterSpacing:'.08em'}}>Analogía del sistema solar</div>
+            El sol en el centro es la <strong style={{color:'#13d6c1'}}>tabla de hechos</strong> — ventas, transacciones, eventos. Los planetas alrededor son las <strong style={{color:'#0a9a88'}}>tablas de dimensión</strong> — fechas, productos, clientes. El sol contiene los números; los planetas, el contexto que explica esos números.
+          </div>
+          <StarSchema />
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.65rem'}}>
+          <div className="card">
+            <div style={{color:'#13d6c1',fontWeight:700,fontSize:'.83rem',marginBottom:'.4rem'}}>Tabla de Hechos</div>
+            <div style={{fontSize:'.78rem',color:'#8b86a8',lineHeight:1.5,marginBottom:'.5rem'}}>Contiene transacciones numéricas medibles. Alta granularidad, muchas filas. Ejemplos: ventas, impresiones, clics, pedidos.</div>
+            <div style={{display:'flex',gap:'.3rem',flexWrap:'wrap'}}><Badge text="Muchas filas" color="teal"/><Badge text="Métricas" color="navy"/></div>
+          </div>
+          <div className="card">
+            <div style={{color:'#0a9a88',fontWeight:700,fontSize:'.83rem',marginBottom:'.4rem'}}>Tablas de Dimensión</div>
+            <div style={{fontSize:'.78rem',color:'#8b86a8',lineHeight:1.5,marginBottom:'.5rem'}}>Contexto descriptivo. Pocas filas, muchas columnas. Responden ¿quién? ¿qué? ¿cuándo? ¿dónde? Ejemplos: Clientes, Productos, Fechas.</div>
+            <div style={{display:'flex',gap:'.3rem',flexWrap:'wrap'}}><Badge text="Pocas filas" color="green"/><Badge text="Contexto" color="navy"/></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <H2 title="Granularidad" sub="El nivel de detalle de tus datos" />
+        <div className="card">
+          <div className="analogy-box" style={{marginBottom:'.9rem'}}>
+            <div style={{fontSize:'.68rem',color:'#13d6c1',fontWeight:700,marginBottom:'.22rem',textTransform:'uppercase',letterSpacing:'.08em'}}>Analogía</div>
+            Granularidad es como el zoom de una foto. Una foto aérea de la ciudad tiene baja granularidad. Una macro de una hormiga, alta granularidad. Datos de venta diaria por producto tienen más granularidad que los mensuales por categoría.
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(100px,1fr))',gap:'.5rem'}}>
+            {[
+              {l:'Anual',   s:'Total año',   bar:'▓▓▓▓▓', c:'#3e3a5e'},
+              {l:'Mensual', s:'Mes a mes',   bar:'▓▓▓▒▒', c:'#1d085e'},
+              {l:'Semanal', s:'Por semana',  bar:'▓▓▒▒▒', c:'#0a9a88'},
+              {l:'Diaria',  s:'Por día',     bar:'▓▒▒▒▒', c:'#13d6c1'},
+              {l:'Por hora',s:'Cada hora',   bar:'░░▒▒▒', c:'#3de8d6'},
+            ].map(g => (
+              <div key={g.l} style={{background:'#1a1542',border:'1px solid #221b56',borderRadius:'8px',padding:'.6rem',textAlign:'center'}}>
+                <div style={{fontSize:'.72rem',fontFamily:'DM Mono,monospace',color:g.c,letterSpacing:'.15em',marginBottom:'.18rem'}}>{g.bar}</div>
+                <div style={{fontSize:'.76rem',fontWeight:700,color:'#e8e6f0'}}>{g.l}</div>
+                <div style={{fontSize:'.68rem',color:'#8b86a8'}}>{g.s}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <H2 title="Tipos de Relaciones" sub="Cómo se conectan las tablas en el modelo" />
+        <div style={{display:'flex',flexDirection:'column',gap:'.65rem'}}>
+          {[
+            {t:'Uno a Muchos (1:*)',  d:'La más común. Un cliente puede tener muchas ventas, pero cada venta pertenece a un cliente. Siempre busca este tipo cuando puedas.', c:'#10b981', ex:'DIM_Cliente → FACT_Ventas'},
+            {t:'Muchos a Muchos (*:*)',d:'Más compleja y puede degradar el rendimiento. Ej: un producto en muchas promos y una promo aplicando a muchos productos. Usar con precaución.', c:'#fb923c', ex:'FACT_Ventas ↔ DIM_Promo'},
+            {t:'Uno a Uno (1:1)',     d:'Rara en la práctica. Generalmente indica que las tablas deberían estar unidas o que hay un error de diseño del modelo.', c:'#9d8ff5', ex:'DIM_Empleado → DIM_Detalle'},
+          ].map(r => (
+            <div key={r.t} className="card" style={{borderLeft:`3px solid ${r.c}`}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:'.65rem',flexWrap:'wrap'}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:'.85rem',color:r.c,marginBottom:'.28rem'}}>{r.t}</div>
+                  <div style={{fontSize:'.8rem',color:'#8b86a8',lineHeight:1.5}}>{r.d}</div>
+                </div>
+                <div style={{background:'#1a1542',border:'1px solid #221b56',borderRadius:'6px',padding:'.28rem .55rem',fontFamily:'DM Mono,monospace',fontSize:'.72rem',color:'#e8e6f0',whiteSpace:'nowrap',flexShrink:0}}>{r.ex}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabDAXEsencial() {
+  return (
+    <div className="fade-up" style={{display:'flex',flexDirection:'column',gap:'2rem'}}>
+
+      <div>
+        <H2 title="Medidas vs Columnas Calculadas" sub="La decisión más importante en DAX" />
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.7rem',marginBottom:'.85rem'}}>
+          <div className="card" style={{borderTop:'3px solid #13d6c1'}}>
+            <div style={{color:'#13d6c1',fontWeight:700,fontSize:'.88rem',marginBottom:'.4rem'}}>Medida</div>
+            <div style={{fontSize:'.78rem',color:'#8b86a8',lineHeight:1.6,marginBottom:'.65rem'}}>Calculada al momento de la consulta. Dinámica, responde al contexto del visual. No ocupa espacio en el modelo.</div>
+            <div style={{display:'flex',flexDirection:'column',gap:'.28rem'}}>
+              <Badge text="Dinámica" color="teal"/>
+              <Badge text="No ocupa RAM" color="green"/>
+              <Badge text="Requiere agregación" color="navy"/>
+            </div>
+          </div>
+          <div className="card" style={{borderTop:'3px solid #9d8ff5'}}>
+            <div style={{color:'#9d8ff5',fontWeight:700,fontSize:'.88rem',marginBottom:'.4rem'}}>Columna Calculada</div>
+            <div style={{fontSize:'.78rem',color:'#8b86a8',lineHeight:1.6,marginBottom:'.65rem'}}>Calculada al refrescar el modelo. Estática, materializada en memoria. Útil para segmentación y filtros.</div>
+            <div style={{display:'flex',flexDirection:'column',gap:'.28rem'}}>
+              <Badge text="Estática" color="orange"/>
+              <Badge text="Ocupa RAM" color="orange"/>
+              <Badge text="Se puede filtrar" color="navy"/>
+            </div>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.65rem'}}>
+          <Code code={`// MEDIDA — suma dinámica
+Total Sales = 
+SUM(Sales[Amount])
+// Cambia con cada filtro del visual`} label="Ejemplo: Medida" />
+          <Code code={`// COLUMNA CALCULADA — categoriza precio
+Price Category = 
+IF(
+    Products[Price] > 100,
+    "Premium",
+    "Standard"
+)
+// Se calcula 1 vez al refresh`} label="Ejemplo: Columna calculada" />
+        </div>
+      </div>
+
+      <div>
+        <H2 title="Contexto de Fila vs Contexto de Filtro" sub="El concepto más difícil de DAX, explicado con supermercado" />
+        <div className="card" style={{marginBottom:'.85rem'}}>
+          <div className="analogy-box" style={{marginBottom:'.9rem'}}>
+            <div style={{fontSize:'.68rem',color:'#13d6c1',fontWeight:700,marginBottom:'.22rem',textTransform:'uppercase',letterSpacing:'.08em'}}>Analogía del supermercado</div>
+            <strong style={{color:'#e8e6f0'}}>Contexto de fila:</strong> Caminas por el supermercado leyendo el precio de cada producto, uno por uno. Ves el precio de "ese" producto específico. DAX opera sobre una fila a la vez.<br/><br/>
+            <strong style={{color:'#e8e6f0'}}>Contexto de filtro:</strong> El gerente decide mostrar solo productos de "Lácteos" en el monitor. Ahora solo ves esa sección. Eso es lo que selecciona el usuario con un slicer o gráfico — DAX solo calcula sobre ese subconjunto.
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.65rem',marginBottom:'.85rem'}}>
+            <div style={{background:'#1a1542',border:'1px solid #221b56',borderRadius:'8px',padding:'.7rem'}}>
+              <div style={{fontWeight:700,color:'#9d8ff5',fontSize:'.8rem',marginBottom:'.4rem'}}>Contexto de Fila</div>
+              <div style={{fontSize:'.76rem',color:'#8b86a8',lineHeight:1.5}}>Existe en columnas calculadas e iteradores (SUMX, AVERAGEX, MAXX). DAX procesa cada fila de forma independiente.</div>
+            </div>
+            <div style={{background:'#1a1542',border:'1px solid #221b56',borderRadius:'8px',padding:'.7rem'}}>
+              <div style={{fontWeight:700,color:'#13d6c1',fontSize:'.8rem',marginBottom:'.4rem'}}>Contexto de Filtro</div>
+              <div style={{fontSize:'.76rem',color:'#8b86a8',lineHeight:1.5}}>Creado por el visual, slicers y CALCULATE. Define qué subconjunto de datos está activo para evaluar una medida.</div>
+            </div>
+          </div>
+          <Code code={`// Contexto de FILA (columna calculada)
+// Cada fila accede solo a sus propios valores
+Profit Per Row = 
+Sales[Revenue] - Sales[Cost]
+// → Fila 1: 100 - 60 = 40
+// → Fila 2: 250 - 180 = 70
+
+// Contexto de FILTRO (medida)
+// "Ventas de Electrónica en Q1 2025"
+// se construye desde los slicers y CALCULATE
+Total Filtered Sales = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    Products[Category] = "Electronics",  // filtro explícito
+    Dates[Quarter] = "Q1"               // filtro adicional
+)`} label="Contextos en código" />
+        </div>
+      </div>
+
+      <div>
+        <H2 title="Transición de Contexto" sub="El puente entre contexto de fila y de filtro" />
+        <div className="card">
+          <div className="analogy-box" style={{marginBottom:'.75rem'}}>
+            <div style={{fontSize:'.68rem',color:'#13d6c1',fontWeight:700,marginBottom:'.22rem',textTransform:'uppercase',letterSpacing:'.08em'}}>Concepto avanzado</div>
+            Cuando usas CALCULATE dentro de una columna calculada, DAX hace una "transición de contexto": convierte el contexto de fila actual en un contexto de filtro. Es como decirle: "filtra la tabla para que solo muestre filas idénticas a esta fila actual".
+          </div>
+          <Code code={`// CALCULATE activa la transición contexto fila → filtro
+// En una columna calculada en Products, DAX filtra
+// automáticamente Sales por el ProductID de esa fila
+Sales Same Product = 
+CALCULATE(SUM(Sales[Amount]))
+// Sin CALCULATE, usarías SUMX o RELATEDTABLE`} label="Transición de contexto" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabMedidasDAX() {
+  return (
+    <div className="fade-up">
+      <H2 title="Librería de Fórmulas DAX" sub="Haz clic en cada función para ver la analogía, el código y el caso de uso real" />
+      <div style={{marginBottom:'1.1rem',display:'flex',gap:'.4rem',flexWrap:'wrap',alignItems:'center'}}>
+        <Badge text="7 funciones" color="teal"/>
+        <Badge text="3 Time Intelligence" color="navy"/>
+        <span style={{fontSize:'.75rem',color:'#8b86a8'}}>— Clic para expandir</span>
+      </div>
+      {FORMULAS.map(f => <FormulaCard key={f.name} f={f} />)}
+    </div>
+  );
+}
+
+function TabCasosUso() {
+  const [active, setActive] = useState('marketing');
+
+  const cases = {
+    marketing: {
+      label:'Marketing',
+      items:[
+        { name:'ROAS', full:'Return on Ad Spend', color:'#13d6c1', benchmark:'Benchmark: 4x excelente, 2x aceptable, menos de 1x = pérdida',
+          what:'Cuánto ingreso genera cada peso/dólar invertido en publicidad.',
+          code:`ROAS = 
+DIVIDE(
+    SUM(Sales[Revenue]),
+    SUM(Marketing[AdSpend]),
+    0
+)` },
+        { name:'CAC', full:'Customer Acquisition Cost', color:'#9d8ff5', benchmark:'Benchmark: CAC debe ser menor a LTV/3 para ser sostenible',
+          what:'Cuánto cuesta adquirir un cliente nuevo. Siempre comparar con el LTV.',
+          code:`CAC = 
+DIVIDE(
+    SUM(Marketing[TotalSpend]),
+    DISTINCTCOUNT(Sales[CustomerID]),
+    BLANK()
+)` },
+        { name:'LTV', full:'Customer Lifetime Value', color:'#10b981', benchmark:'Ratio LTV:CAC ideal es 3:1 o mayor',
+          what:'Valor total que genera un cliente durante toda su relación con la marca.',
+          code:`LTV = 
+VAR AvgOrderValue = 
+    DIVIDE(SUM(Sales[Amount]), COUNT(Sales[OrderID]))
+VAR AvgFrequency = 
+    DIVIDE(COUNT(Sales[OrderID]), DISTINCTCOUNT(Sales[CustomerID]))
+VAR AvgLifespan = 24  // meses promedio activo
+RETURN
+    AvgOrderValue * AvgFrequency * AvgLifespan` },
+        { name:'Churn Rate', full:'Tasa de Abandono Mensual', color:'#ef4444', benchmark:'Churn menor al 5% mensual es aceptable en SaaS B2C',
+          what:'Porcentaje de clientes que dejan de comprar en un período. Métrica crítica de retención.',
+          code:`Churn Rate = 
+VAR ActiveStart = 
+    CALCULATE(
+        DISTINCTCOUNT(Customers[CustomerID]),
+        DATEADD(Dates[Date], -1, MONTH)
+    )
+VAR Churned = 
+    CALCULATE(
+        DISTINCTCOUNT(Customers[CustomerID]),
+        Customers[Status] = "Churned"
+    )
+RETURN
+    DIVIDE(Churned, ActiveStart)` },
+      ]
+    },
+    ventas: {
+      label:'Ventas',
+      items:[
+        { name:'Sell-Through %', full:'Tasa de Venta sobre Inventario', color:'#fb923c', benchmark:'Sell-through mayor al 80% indica buena gestión de inventario',
+          what:'Qué porcentaje del inventario recibido fue vendido. Fundamental en retail y moda.',
+          code:`Sell Through % = 
+DIVIDE(
+    SUM(Sales[UnitsSold]),
+    SUM(Inventory[UnitsReceived]),
+    0
+)` },
+        { name:'Forecast vs Actuals', full:'Varianza Forecast vs Real', color:'#13d6c1', benchmark:'Varianza de ±5% es aceptable; mayor a ±15% requiere revisar el modelo',
+          what:'Diferencia entre lo proyectado y lo realmente alcanzado. Mide la precisión del forecast.',
+          code:`Forecast Variance = 
+SUM(Sales[ActualRevenue]) 
+    - SUM(Forecast[ForecastRevenue])
+
+Forecast Variance % = 
+DIVIDE(
+    [Forecast Variance],
+    SUM(Forecast[ForecastRevenue])
+)` },
+      ]
+    },
+    finanzas: {
+      label:'Finanzas',
+      items:[
+        { name:'Gross Margin %', full:'Margen Bruto', color:'#10b981', benchmark:'Varía por industria: SaaS 70–80%, retail 20–40%',
+          what:'Porcentaje de ganancia después de costos directos, antes de gastos operativos.',
+          code:`Gross Margin % = 
+DIVIDE(
+    SUM(Sales[Revenue]) - SUM(Sales[COGS]),
+    SUM(Sales[Revenue]),
+    0
+)` },
+        { name:'Budget Variance', full:'Varianza Presupuestaria', color:'#9d8ff5', benchmark:'Proceso mensual: analizar varianzas mayores al 5%',
+          what:'Diferencia entre el presupuesto aprobado y los valores reales. Puede ser favorable o desfavorable.',
+          code:`Budget Variance = 
+SUM(Actuals[Amount]) - SUM(Budget[Amount])
+
+Budget Variance % = 
+DIVIDE([Budget Variance], SUM(Budget[Amount]))
+
+// Favorable si ingresos > budget O gastos < budget
+Is Favorable = 
+IF([Budget Variance] > 0, "Favorable", "Desfavorable")` },
+      ]
+    },
+  };
+
+  const cur = cases[active];
+  return (
+    <div className="fade-up" style={{display:'flex',flexDirection:'column',gap:'2rem'}}>
+      <div>
+        <H2 title="Casos de Uso Reales" sub="Métricas de negocio con fórmulas DAX listas para usar" />
+        <div style={{display:'flex',gap:'.45rem',marginBottom:'1.25rem',flexWrap:'wrap'}}>
+          {Object.entries(cases).map(([k,v]) => (
+            <button key={k} onClick={() => setActive(k)} style={{
+              background: active===k ? '#13d6c1' : '#1a1542',
+              color:      active===k ? '#09071a' : '#8b86a8',
+              border:    `1px solid ${active===k ? '#13d6c1' : '#221b56'}`,
+              borderRadius:'8px', padding:'.42rem .9rem',
+              fontWeight: active===k ? 700 : 500, cursor:'pointer',
+              fontSize:'.83rem', fontFamily:'Sora,sans-serif', transition:'all .18s'
+            }}>{v.label}</button>
+          ))}
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:'.85rem'}}>
+          {cur.items.map(m => (
+            <div key={m.name} className="card" style={{borderLeft:`3px solid ${m.color}`}}>
+              <div style={{marginBottom:'.65rem'}}>
+                <div style={{fontWeight:800,fontSize:'.98rem',color:m.color}}>{m.name}</div>
+                <div style={{fontSize:'.78rem',color:'#8b86a8'}}>{m.full}</div>
+              </div>
+              <div style={{fontSize:'.82rem',color:'#e8e6f0',marginBottom:'.7rem',lineHeight:1.5}}>{m.what}</div>
+              <Code code={m.code} label="DAX Formula" />
+              <div style={{marginTop:'.55rem',fontSize:'.75rem',color:'#8b86a8',fontStyle:'italic',borderTop:'1px solid #221b56',paddingTop:'.55rem'}}>{m.benchmark}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <H2 title="Calculadora ROAS Interactiva" sub="Ajusta los parámetros y ve los KPIs en tiempo real" />
+        <ROASCalc />
+      </div>
+    </div>
+  );
+}
+
+function TabBuenasPracticas() {
+  return (
+    <div className="fade-up" style={{display:'flex',flexDirection:'column',gap:'2rem'}}>
+
+      <div>
+        <H2 title="Nomenclatura y Convenciones" sub="Un modelo que otros pueden leer es un modelo que escala" />
+        <div style={{display:'flex',flexDirection:'column',gap:'.75rem'}}>
+          {[
+            { rule:'Tabla de medidas dedicada', color:'#13d6c1',
+              desc:'Crea una tabla vacía llamada "_Measures" y coloca todas las medidas ahí. Nunca las dejes dispersas en las tablas de hechos.',
+              code:`// Estructura recomendada en el modelo
+_Measures/
+  ├── [$ Total Revenue]
+  ├── [$ Gross Margin]
+  ├── [% Margin]
+  ├── [# Orders]
+  └── [ROAS]
+
+// Tabla vacía vía Power Query (M)
+= Table.FromRows({}, {"Dummy"})` },
+            { rule:'Prefijos por tipo de valor', color:'#9d8ff5',
+              desc:'Usa prefijos que identifiquen de un vistazo qué tipo de valor devuelve la medida.',
+              code:`// $ → valores monetarios
+$ Total Revenue = SUM(Sales[Amount])
+$ Gross Margin  = [$ Total Revenue] - [$ Total Cost]
+
+// # → conteos
+# Orders    = COUNT(Sales[OrderID])
+# Customers = DISTINCTCOUNT(Sales[CustomerID])
+
+// % → porcentajes
+% Margin    = DIVIDE([$Gross Margin], [$Total Revenue])
+% Growth YoY = DIVIDE([$Revenue] - [$Revenue LY], [$Revenue LY])` },
+            { rule:'Nombres de tablas y columnas', color:'#0a9a88',
+              desc:'Usa MAYÚSCULAS para tablas, PascalCase para columnas. Prefijo DIM_ y FACT_ ayuda a distinguir el rol de cada tabla.',
+              code:`// Tablas:
+FACT_SALES          // tabla de hechos
+DIM_CUSTOMER        // dimensión cliente
+DIM_DATE            // dimensión fecha (siempre marcada como tabla de fechas)
+_MEASURES           // tabla de medidas (prefijo _ la pone primera en el panel)
+
+// Columnas:
+CustomerID          // IDs al final
+CustomerName        // nombre descriptivo en PascalCase
+IsActive            // booleanos: Is / Has al inicio
+OrderDate           // fechas: Date al final` },
+          ].map(b => (
+            <div key={b.rule} className="card" style={{borderLeft:`3px solid ${b.color}`}}>
+              <div style={{fontWeight:700,color:b.color,fontSize:'.88rem',marginBottom:'.35rem'}}>{b.rule}</div>
+              <div style={{fontSize:'.81rem',color:'#8b86a8',lineHeight:1.5,marginBottom:'.7rem'}}>{b.desc}</div>
+              <Code code={b.code} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <H2 title="Performance: Qué hace lento un modelo" sub="Patrones a evitar y patrones a seguir" />
+        <div style={{display:'flex',flexDirection:'column',gap:'.65rem'}}>
+          {[
+            { issue:'EVITAR: Relaciones muchos a muchos innecesarias',      sev:'Alto',         detail:'Degradan el rendimiento exponencialmente. Introduce una tabla puente o dimensión que normalice la relación antes de aceptar un *:*.' },
+            { issue:'EVITAR: Columnas calculadas donde deberían ir medidas', sev:'Alto',         detail:'Cada columna calculada se materializa en RAM al refrescar. Con millones de filas puede doblar el tamaño del modelo.' },
+            { issue:'EVITAR: FILTER con texto directamente en CALCULATE',    sev:'Medio',        detail:'Prefiere referencias de tabla directa. FILTER(tabla, columna="texto") escanea la tabla fila a fila.' },
+            { issue:'EVITAR: Medidas con más de 6 niveles de anidamiento',   sev:'Medio',        detail:'Cada referencia a otra medida añade un contexto de evaluación. Más de 5–6 niveles puede causar timeouts en conjuntos de datos grandes.' },
+            { issue:'USAR: Variables VAR / RETURN',                         sev:'Optimización', detail:'Las variables se evalúan una sola vez y se reutilizan. Evitan cálculos repetidos y hacen el código más legible y mantenible.' },
+          ].map(p => {
+            const isGood = p.issue.startsWith('USAR');
+            const sevColor = p.sev === 'Alto' ? 'red' : p.sev === 'Optimización' ? 'green' : 'orange';
+            return (
+              <div key={p.issue} className="card" style={{borderLeft:`3px solid ${isGood ? '#10b981' : p.sev === 'Alto' ? '#ef4444' : '#fb923c'}`}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:'.5rem',marginBottom:'.3rem',flexWrap:'wrap'}}>
+                  <div style={{fontWeight:700,fontSize:'.84rem',color:'#e8e6f0'}}>{p.issue}</div>
+                  <Badge text={p.sev} color={sevColor} />
+                </div>
+                <div style={{fontSize:'.8rem',color:'#8b86a8',lineHeight:1.5}}>{p.detail}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <H2 title="Errores Comunes en DAX" sub="Los que todos cometemos al principio" />
+        <div style={{display:'flex',flexDirection:'column',gap:'.75rem'}}>
+          {[
+            { err:'División por cero sin manejar',
+              wrong:`// EVITAR: genera ERROR si hay 0 órdenes
+Avg Ticket Wrong = 
+    SUM(Sales[Amount]) / COUNT(Sales[OrderID])`,
+              right:`// CORRECTO: usa DIVIDE con valor alternativo
+Avg Ticket = 
+DIVIDE(
+    SUM(Sales[Amount]),
+    COUNT(Sales[OrderID]),
+    0
+)` },
+            { err:'Olvidar ALL() en el % del total',
+              wrong:`// EVITAR: siempre dará 100% porque
+// numerador y denominador tienen el mismo filtro
+% Wrong = 
+DIVIDE(SUM(Sales[Amount]), SUM(Sales[Amount]))`,
+              right:`// CORRECTO: ALL() elimina el filtro del denominador
+% of Total = 
+DIVIDE(
+    SUM(Sales[Amount]),
+    CALCULATE(
+        SUM(Sales[Amount]),
+        ALL(Sales)
+    )
+)` },
+          ].map(e => (
+            <div key={e.err} className="card">
+              <div style={{fontWeight:700,color:'#ef4444',fontSize:'.86rem',marginBottom:'.7rem'}}>{e.err}</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.5rem'}}>
+                <Code code={e.wrong} label="Evitar" />
+                <Code code={e.right} label="Correcto" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabCheatSheet() {
+  const sections = [
+    { title:'Agregación', color:'#13d6c1', items:[
+      {fn:'SUM(T[C])',             d:'Suma de una columna'},
+      {fn:'AVERAGE(T[C])',         d:'Promedio simple'},
+      {fn:'MAX(T[C]) / MIN(T[C])', d:'Valor máximo / mínimo'},
+      {fn:'COUNT(T[C])',           d:'Cuenta valores no blancos'},
+      {fn:'COUNTA(T[C])',          d:'Cuenta incluyendo texto'},
+      {fn:'DISTINCTCOUNT(T[C])',   d:'Cuenta valores únicos'},
+      {fn:'COUNTBLANK(T[C])',      d:'Cuenta celdas vacías'},
+    ]},
+    { title:'Filtros y Contexto', color:'#9d8ff5', items:[
+      {fn:'CALCULATE(expr, f1, f2)', d:'Evalúa expr con filtros adicionales'},
+      {fn:'FILTER(tabla, cond)',      d:'Devuelve tabla filtrada fila a fila'},
+      {fn:'ALL(tabla)',               d:'Elimina todos los filtros de la tabla'},
+      {fn:'ALLEXCEPT(T, T[C])',       d:'Elimina filtros excepto los indicados'},
+      {fn:'ALLSELECTED(T[C])',        d:'Respeta slicers, ignora contexto del visual'},
+      {fn:'KEEPFILTERS(expr)',        d:'Añade filtro sin reemplazar el existente'},
+      {fn:'REMOVEFILTERS(T[C])',      d:'Alias moderno de ALL() en CALCULATE'},
+    ]},
+    { title:'Time Intelligence', color:'#0a9a88', items:[
+      {fn:'TOTALYTD(expr, fechas)',           d:'Acumulado año hasta la fecha'},
+      {fn:'TOTALQTD(expr, fechas)',           d:'Acumulado trimestre hasta la fecha'},
+      {fn:'TOTALMTD(expr, fechas)',           d:'Acumulado mes hasta la fecha'},
+      {fn:'SAMEPERIODLASTYEAR(fechas)',       d:'Mismo período del año anterior'},
+      {fn:'DATEADD(fechas, n, intervalo)',    d:'Desplaza el período n intervalos'},
+      {fn:'PARALLELPERIOD(fechas, n, int)',   d:'Período paralelo completo'},
+      {fn:'DATESBETWEEN(fechas, f1, f2)',     d:'Rango entre dos fechas'},
+      {fn:'DATESYTD(fechas)',                d:'Todas las fechas del año hasta hoy'},
+    ]},
+    { title:'Lógica e Iteradores', color:'#fb923c', items:[
+      {fn:'IF(cond, true, false)',    d:'Condicional simple'},
+      {fn:'SWITCH(expr, v1, r1, ...)',d:'Múltiples condiciones — como CASE'},
+      {fn:'IFERROR(expr, alternativo)',d:'Captura errores'},
+      {fn:'ISBLANK(expr)',            d:'Verifica si el valor es BLANK'},
+      {fn:'SUMX(tabla, expr)',        d:'Suma iterando cada fila'},
+      {fn:'AVERAGEX(tabla, expr)',    d:'Promedio iterando cada fila'},
+      {fn:'RANKX(tabla, expr)',       d:'Ranking de valores'},
+    ]},
+    { title:'Relaciones y Lookup', color:'#10b981', items:[
+      {fn:'RELATED(DIM[C])',             d:'Valor de dimensión relacionada (lado 1)'},
+      {fn:'RELATEDTABLE(FACT)',          d:'Tabla relacionada (lado muchos)'},
+      {fn:'LOOKUPVALUE(res, col, val)',  d:'Búsqueda estilo VLOOKUP'},
+      {fn:'USERELATIONSHIP(T1[C],T2[C])',d:'Activa relación inactiva'},
+    ]},
+    { title:'Variables VAR / RETURN', color:'#569cd6', items:[
+      {fn:'VAR nombre = expr',        d:'Define una variable (evaluada 1 vez)'},
+      {fn:'RETURN resultado',         d:'Devuelve el resultado final de la medida'},
+      {fn:'VAR x = CALCULATE(...)',   d:'Captura el contexto en la variable'},
+      {fn:'VAR IsPos = [M] > 0',      d:'Variables booleanas'},
+    ]},
+  ];
+
+  return (
+    <div className="fade-up" style={{display:'flex',flexDirection:'column',gap:'1.5rem'}}>
+      <H2 title="Visual Cheat Sheet" sub="Referencia rápida de sintaxis DAX más usada — Ctrl+P para guardar como PDF" />
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(270px,1fr))',gap:'.85rem'}}>
+        {sections.map(sec => (
+          <div key={sec.title} className="card" style={{borderTop:`3px solid ${sec.color}`}}>
+            <div style={{fontWeight:700,color:sec.color,fontSize:'.85rem',marginBottom:'.7rem',letterSpacing:'.03em'}}>{sec.title}</div>
+            {sec.items.map((item,i) => (
+              <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.45rem',padding:'.32rem 0',borderBottom: i < sec.items.length-1 ? '1px solid #221b56' : 'none',alignItems:'start'}}>
+                <div style={{fontFamily:'DM Mono,monospace',fontSize:'.69rem',color:'#9cdcfe',wordBreak:'break-all',lineHeight:1.4}}>{item.fn}</div>
+                <div style={{fontSize:'.7rem',color:'#8b86a8',lineHeight:1.4}}>{item.d}</div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <div style={{fontWeight:700,color:'#e8e6f0',marginBottom:'.75rem',fontSize:'.92rem'}}>Patrones de Código Frecuentes</div>
+        <div style={{display:'flex',flexDirection:'column',gap:'.75rem'}}>
+          <Code code={`// Patrón 1: VAR + RETURN (siempre preferible)
+KPI Name = 
+VAR Numerator   = SUM(Table[Value])
+VAR Denominator = CALCULATE(SUM(Table[Value]), ALL(Table))
+VAR Result      = DIVIDE(Numerator, Denominator, 0)
+RETURN
+    Result`} label="Patrón: VAR + RETURN" />
+
+          <Code code={`// Patrón 2: Comparación año a año (YoY)
+Sales YoY % = 
+VAR CurrentPeriod = SUM(Sales[Amount])
+VAR PriorYear = 
+    CALCULATE(
+        SUM(Sales[Amount]),
+        SAMEPERIODLASTYEAR(Dates[Date])
+    )
+RETURN
+    DIVIDE(CurrentPeriod - PriorYear, PriorYear)`} label="Patrón: Comparación año anterior" />
+
+          <Code code={`// Patrón 3: Ranking dinámico respetando slicers
+Product Rank = 
+RANKX(
+    ALLSELECTED(Products[ProductName]),
+    [$ Total Revenue],
+    ,
+    DESC,
+    DENSE
+)`} label="Patrón: Ranking" />
+
+          <Code code={`// Patrón 4: % del total con contexto del slicer
+% of Selected Total = 
+DIVIDE(
+    SUM(Sales[Amount]),
+    CALCULATE(
+        SUM(Sales[Amount]),
+        ALLSELECTED(Products[Category])
+    )
+)`} label="Patrón: % del total seleccionado" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP
+============================================================ */
+const TABS = [
+  { id:0, label:'Fundamentos' },
+  { id:1, label:'DAX Esencial' },
+  { id:2, label:'Medidas DAX' },
+  { id:3, label:'Casos Reales' },
+  { id:4, label:'Buenas Prácticas' },
+  { id:5, label:'Cheat Sheet' },
+];
+
+function App() {
+  const [tab, setTab] = useState(0);
+
+  const content = [
+    <TabFundamentos />,
+    <TabDAXEsencial />,
+    <TabMedidasDAX />,
+    <TabCasosUso />,
+    <TabBuenasPracticas />,
+    <TabCheatSheet />,
+  ];
+
+  return (
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+
+      {/* ===== HERO ===== */}
+      <header style={{
+        background:'linear-gradient(155deg, #09071a 0%, #1d085e 65%, #071e1c 100%)',
+        borderBottom:'1px solid rgba(19,214,193,.14)',
+        padding:'1.4rem 1rem 2rem',
+        position:'relative',
+        overflow:'hidden',
+      }}>
+        <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(ellipse at 18% 55%, rgba(19,214,193,.06) 0%, transparent 55%), radial-gradient(ellipse at 82% 18%, rgba(157,143,245,.08) 0%, transparent 50%)',pointerEvents:'none'}}/>
+        <div style={{maxWidth:'860px',margin:'0 auto',position:'relative'}}>
+
+          {/* Back + year */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.4rem',flexWrap:'wrap',gap:'.5rem'}}>
+            <a href="https://valescabravo.github.io/"
+              style={{display:'inline-flex',alignItems:'center',gap:'.35rem',color:'#8b86a8',textDecoration:'none',fontSize:'.8rem',fontWeight:500,transition:'color .18s'}}
+              onMouseEnter={e => e.currentTarget.style.color='#13d6c1'}
+              onMouseLeave={e => e.currentTarget.style.color='#8b86a8'}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              Back to Portfolio
+            </a>
+            <span style={{background:'rgba(19,214,193,.12)',border:'1px solid rgba(19,214,193,.3)',color:'#13d6c1',borderRadius:'4px',padding:'.12rem .55rem',fontSize:'.68rem',fontWeight:700,fontFamily:'DM Mono,monospace',letterSpacing:'.08em'}}>2026</span>
+          </div>
+
+          {/* Title */}
+          <div style={{textAlign:'center',marginBottom:'1.4rem'}}>
+            <div style={{display:'inline-flex',alignItems:'center',gap:'.45rem',background:'rgba(29,8,94,.55)',border:'1px solid rgba(19,214,193,.2)',borderRadius:'5px',padding:'.25rem .65rem',marginBottom:'.85rem',fontSize:'.68rem',color:'#13d6c1',fontWeight:700,fontFamily:'DM Mono,monospace',letterSpacing:'.08em'}}>
+              INTERACTIVE LAB
+            </div>
+            <h1 style={{fontSize:'clamp(1.75rem,5.5vw,3rem)',fontWeight:800,color:'#e8e6f0',lineHeight:1.1,marginBottom:'.65rem'}}>
+              Power BI
+              <span style={{display:'block',background:'linear-gradient(90deg,#13d6c1,#0a9a88)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+                + DAX Lab
+              </span>
+            </h1>
+            <p style={{fontSize:'clamp(.82rem,2.5vw,.97rem)',color:'#8b86a8',maxWidth:'500px',margin:'0 auto',lineHeight:1.65}}>
+              Desde el modelo estrella hasta time intelligence. Aprende con analogías reales y prueba las fórmulas en vivo.
+            </p>
+          </div>
+
+          {/* Stats */}
+          <div style={{display:'flex',justifyContent:'center',gap:'1.4rem',flexWrap:'wrap'}}>
+            {[{n:'7',l:'Funciones DAX'},{n:'10+',l:'Casos de uso'},{n:'5',l:'Preguntas Quiz'},{n:'1',l:'Calculadora live'}].map(s => (
+              <div key={s.l} style={{textAlign:'center'}}>
+                <div style={{fontSize:'1.35rem',fontWeight:800,color:'#13d6c1',lineHeight:1,fontFamily:'Sora,sans-serif'}}>{s.n}</div>
+                <div style={{fontSize:'.68rem',color:'#8b86a8',marginTop:'.12rem'}}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* ===== NAV ===== */}
+      <nav style={{background:'#110e2e',borderBottom:'1px solid #221b56',position:'sticky',top:0,zIndex:50}}>
+        <div style={{maxWidth:'860px',margin:'0 auto',padding:'0 .75rem'}}>
+          <div className="tab-scroll" style={{display:'flex'}}>
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                padding:'.8rem .85rem',
+                fontWeight: tab===t.id ? 700 : 500,
+                fontSize:'.8rem',
+                color:       tab===t.id ? '#13d6c1' : '#8b86a8',
+                background:'transparent',
+                border:'none',
+                borderBottom: tab===t.id ? '2px solid #13d6c1' : '2px solid transparent',
+                cursor:'pointer',
+                whiteSpace:'nowrap',
+                fontFamily:'Sora,sans-serif',
+                transition:'color .18s',
+              }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* ===== CONTENT ===== */}
+      <main style={{flex:1,maxWidth:'860px',margin:'0 auto',padding:'1.4rem 1rem',width:'100%'}}>
+        {content[tab]}
+      </main>
+
+      {/* ===== QUIZ ===== */}
+      <section style={{background:'#110e2e',borderTop:'1px solid #221b56',padding:'2rem 1rem'}}>
+        <div style={{maxWidth:'680px',margin:'0 auto'}}>
+          <H2 title="Quiz DAX" sub="5 preguntas para poner a prueba tus conocimientos" />
+          <Quiz />
+        </div>
+      </section>
+
+      {/* ===== FOOTER ===== */}
+      <footer style={{background:'#09071a',borderTop:'1px solid #221b56',padding:'1.1rem 1rem'}}>
+        <div style={{maxWidth:'860px',margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'.45rem'}}>
+          <span style={{fontSize:'.78rem',color:'#8b86a8',fontFamily:'DM Mono,monospace'}}>© 2026 Valesca Bravo — Interactive Lab</span>
+          <a href="https://valescabravo.github.io/" style={{fontSize:'.78rem',color:'#13d6c1',textDecoration:'none',fontFamily:'DM Mono,monospace',fontWeight:500}}>valescabravo.github.io</a>
+        </div>
+      </footer>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
